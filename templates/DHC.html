@@ -1,0 +1,97 @@
+{% for row in rowlist %}
+<div style="display: flex">
+    {% for column in columnlist%}
+    {% csrf_token %}
+    <button type="button" style='width:100px;height:100px;margin:10' onclick="handleclick({{row}}, {{column}})"
+        id="button-{{ row }}-{{ column }}"></button>
+    {% endfor %}
+</div>
+{% endfor %}
+{% if not auto%}
+{% if sign == 1%}
+<p>ID: {{ id }} - 1</p>
+{% else %}
+<p>ID: {{ id }} - 2</p>
+{% endif %}
+{% endif %}
+
+<script src="/static/js/jquery-3.4.1.min.js"></script>
+<script>
+    function handleclick(i, j) {
+        {% if auto %}
+        $.post("{% url 'update' %}", { position: { 'row': i, 'column': j }, id: {{ id }}, csrfmiddlewaretoken: '{{ csrf_token }}' }, function (response) {
+            {% endif %}
+            {% if not auto %}
+            $.post("{% url 'pvpupdate' %}", { position: { 'row': i, 'column': j }, id: {{ id }}, sign: {{ sign }}, csrfmiddlewaretoken: '{{ csrf_token }}' }, function (response) {
+                {% endif %}
+
+                if (response['msg'] === 'wait') {
+                    alert('Please wait...')
+                    return
+                }
+                if (response['msg'] === 'refresh') {
+                    window.location.reload()
+                }
+                if (response['msg'] === 'NO!') {
+                    alert('You can not move!')
+                    return
+                }
+                for (var i = 0; i < {{ rowN }}; i++) {
+        for (var j = 0; j < {{ columnN }}; j++) {
+        $("#button-" + i + '-' + j).text(response['matrix'][i][j])
+    }
+    }
+    if (response["msg"] != 'NA') {
+        alert(response["msg"])
+        {% if auto %}
+        clearInterval(autoupdate)
+        {% endif %}
+        return
+    }
+    {% if auto %}
+    $.post("{% url 'auto' %}", { id: {{ id }}, csrfmiddlewaretoken: '{{ csrf_token }}' }, function (response) {
+        for (var i = 0; i < {{ rowN }}; i++) {
+        for (var j = 0; j < {{ columnN }}; j++) {
+        $("#button-" + i + '-' + j).text(response['matrix'][i][j])
+    }
+    }
+    if (response["msg"] != 'NA') {
+        alert(response["msg"])
+    }
+        }, 'json')
+    {% endif %}
+        }, 'json')
+    }
+
+    {% if not auto %}
+    function updateboard() {
+        $.post("{% url 'updateboard' %}", { position: { 'row': -1, 'column': -1 }, id: {{ id }}, sign: {{ sign }}, csrfmiddlewaretoken: '{{ csrf_token }}' }, function (response) {
+            if (response['msg'] === 'wait') {
+                alert('Please wait...')
+                return
+            }
+            if (response['msg'] === 'refresh') {
+                window.location.reload()
+            }
+            if (response['msg'] === 'NO!') {
+                alert('You can not move!')
+                return
+            }
+            for (var i = 0; i < {{ rowN }}; i++) {
+        for (var j = 0; j < {{ columnN }}; j++) {
+        $("#button-" + i + '-' + j).text(response['matrix'][i][j])
+    }
+    }
+    if (response["msg"] != 'NA') {
+        alert(response["msg"])
+        if (response['msg'] != 'Game start!') {
+            clearInterval(autoupdate)
+        }
+        return
+    }
+        }, 'json')
+    }
+    autoupdate = setInterval(updateboard, 1000)
+    {% endif %}
+
+</script>
